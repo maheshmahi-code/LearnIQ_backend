@@ -1,0 +1,13 @@
+node_modules/
+.env
+uploads/
+*.log
+error.txt
+.vscode/
+.DS_Store
+package-lock.json
+# Extra precaution for any local dev files
+.gemini/
+brain/
+logs/
+temp/
