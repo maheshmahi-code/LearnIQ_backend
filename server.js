@@ -27,6 +27,12 @@ const notesRoutes = require('./routes/notesRoutes');
 
 const app = express();
 
+// Request Logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 // Security Headers
 app.use(helmet());
 
@@ -70,6 +76,7 @@ app.use(
     credentials: true,
   })
 );
+app.options('*', cors()); // Enable pre-flight for all routes
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
