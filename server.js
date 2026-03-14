@@ -49,8 +49,11 @@ app.use('/api/auth', authLimiter);
 const allowedOrigins = [
   CLIENT_URL,
   'https://learn-iq-frontend.vercel.app',
+  'https://learniq-frontend.vercel.app',
+  'https://learn-iq-platform.vercel.app',
   'http://localhost:3000',
-  'http://localhost:5173'
+  'http://localhost:5173',
+  'http://localhost:4173'
 ];
 
 app.use(
