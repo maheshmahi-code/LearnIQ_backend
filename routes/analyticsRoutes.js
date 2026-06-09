@@ -8,5 +8,6 @@ const router = express.Router();
 router.get('/student', protect, analyticsController.getStudentAnalytics);
 router.get('/student/:id', protect, analyticsController.getStudentAnalytics);
 router.get('/admin/overview', protect, adminOnly, analyticsController.getAdminOverview);
+router.get('/admin/performance', protect, adminOnly, analyticsController.getPerformanceMetrics);
 
 module.exports = router;

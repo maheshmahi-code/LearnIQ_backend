@@ -28,11 +28,12 @@ const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id).select('role name').lean();
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found.' });
     }
     req.user = user;
+    req.user.id = user._id.toString(); // Map id getter since lean query strips Mongoose virtuals
     next();
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
@@ -53,8 +54,11 @@ const optionalAuth = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
-    if (user) req.user = user;
+    const user = await User.findById(decoded.id).select('role name').lean();
+    if (user) {
+      req.user = user;
+      req.user.id = user._id.toString(); // Map id getter since lean query strips Mongoose virtuals
+    }
   } catch (_) {
     // Ignore invalid token for optional auth
   }

@@ -58,7 +58,8 @@ const getDecks = async (req, res) => {
   try {
     const decks = await FlashcardDeck.find({ studentId: req.user.id })
       .sort('-createdAt')
-      .populate('cards');
+      .select('-cards')
+      .lean();
     res.json({ success: true, decks });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -70,7 +71,7 @@ const getDeck = async (req, res) => {
     const deck = await FlashcardDeck.findOne({
       _id: req.params.id,
       studentId: req.user.id,
-    }).populate('cards');
+    }).populate('cards').lean();
     if (!deck) return res.status(404).json({ success: false, message: 'Deck not found.' });
     res.json({ success: true, deck });
   } catch (e) {
@@ -111,14 +112,14 @@ const updateCard = async (req, res) => {
 
 const getDueToday = async (req, res) => {
   try {
-    const decks = await FlashcardDeck.find({ studentId: req.user.id }).select('_id');
+    const decks = await FlashcardDeck.find({ studentId: req.user.id }).select('_id').lean();
     const ids = decks.map((d) => d._id);
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     const cards = await Flashcard.find({
       deckId: { $in: ids },
       nextReviewDate: { $lte: today },
-    }).populate('deckId', 'title');
+    }).populate('deckId', 'title').lean();
     res.json({ success: true, cards });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });

@@ -5,26 +5,39 @@
 const Course = require('../models/Course');
 const User = require('../models/User');
 const claudeService = require('../services/claudeService');
+const cache = require('../utils/cache');
 
 const getAll = async (req, res) => {
   try {
     const { category, difficulty, enrolled } = req.query;
+    const cacheKey = `courses:all:cat_${category || 'all'}:diff_${difficulty || 'all'}:usr_${req.user ? req.user.id : 'anon'}:enrolled_${enrolled || 'false'}`;
+
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, courses: cached, fromCache: true });
+    }
+
     let courses = [];
     if (req.user && enrolled === 'true') {
-      const user = await User.findById(req.user.id);
+      const user = await User.findById(req.user.id).select('enrolledCourses').lean();
       const ids = user?.enrolledCourses || [];
       courses = await Course.find({ _id: { $in: ids } })
+        .select('-modules')
         .populate('instructor', 'name avatar')
-        .sort('-createdAt');
+        .sort('-createdAt')
+        .lean();
     } else {
       const filter = { isPublished: true };
       if (category) filter.category = category;
       if (difficulty) filter.difficulty = difficulty;
       courses = await Course.find(filter)
+        .select('-modules')
         .populate('instructor', 'name avatar')
-        .sort('-createdAt');
+        .sort('-createdAt')
+        .lean();
     }
     
+    await cache.set(cacheKey, courses, 300);
     res.json({ success: true, courses });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -33,8 +46,16 @@ const getAll = async (req, res) => {
 
 const getOne = async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id).populate('instructor', 'name avatar');
+    const cacheKey = `courses:one:${req.params.id}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, course: cached, fromCache: true });
+    }
+
+    const course = await Course.findById(req.params.id).populate('instructor', 'name avatar').lean();
     if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+
+    await cache.set(cacheKey, course, 300);
     res.json({ success: true, course });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -44,6 +65,7 @@ const getOne = async (req, res) => {
 const create = async (req, res) => {
   try {
     const course = await Course.create({ ...req.body, createdBy: req.user?.id });
+    await cache.clearPattern('courses:*');
     res.status(201).json({ success: true, course });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -54,6 +76,7 @@ const update = async (req, res) => {
   try {
     const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+    await cache.clearPattern('courses:*');
     res.json({ success: true, course });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -64,6 +87,7 @@ const remove = async (req, res) => {
   try {
     const course = await Course.findByIdAndDelete(req.params.id);
     if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+    await cache.clearPattern('courses:*');
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -105,6 +129,7 @@ const enroll = async (req, res) => {
       }
     }
 
+    await cache.clearPattern('courses:*');
     res.json({ success: true, message: 'Enrolled successfully. New projects await!' });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -202,6 +227,7 @@ const generateCourse = async (req, res) => {
       console.error('Auto Assignment Generation failed:', assError);
     }
 
+    await cache.clearPattern('courses:*');
     res.status(201).json({ success: true, course: newCourse, assignment });
   } catch (e) {
     console.error('Course Generation Error:', e);

@@ -9,8 +9,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 const { connectDB } = require('./config/database');
 const { PORT, CLIENT_URL } = require('./config/environment');
+const { performanceLogger } = require('./middleware/performanceMiddleware');
 
 const authRoutes = require('./routes/authRoutes');
 const courseRoutes = require('./routes/courseRoutes');
@@ -26,6 +28,12 @@ const gamificationRoutes = require('./routes/gamificationRoutes');
 const notesRoutes = require('./routes/notesRoutes');
 
 const app = express();
+
+// Response compression
+app.use(compression());
+
+// Performance monitoring
+app.use(performanceLogger);
 
 // Request Logging
 app.use((req, res, next) => {

@@ -36,4 +36,7 @@ const noteSchema = new mongoose.Schema({
   timestamps: true
 });
 
+noteSchema.index({ uploadedBy: 1 });
+noteSchema.index({ subject: 1 });
+
 module.exports = mongoose.model('Note', noteSchema);

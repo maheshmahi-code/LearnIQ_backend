@@ -65,4 +65,8 @@ const courseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Performance Indexes
+courseSchema.index({ isPublished: 1, category: 1, difficulty: 1, createdAt: -1 });
+courseSchema.index({ instructor: 1 });
+
 module.exports = mongoose.model('Course', courseSchema);

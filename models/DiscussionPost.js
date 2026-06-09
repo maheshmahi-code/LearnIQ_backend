@@ -63,5 +63,6 @@ const discussionPostSchema = new mongoose.Schema(
 
 discussionPostSchema.index({ subject: 1 });
 discussionPostSchema.index({ createdAt: -1 });
+discussionPostSchema.index({ authorId: 1 });
 
 module.exports = mongoose.model('DiscussionPost', discussionPostSchema);

@@ -8,10 +8,11 @@ const QuizAttempt = require('../models/QuizAttempt');
 const quizGeneratorService = require('../services/quizGeneratorService');
 const weaknessAnalyserService = require('../services/weaknessAnalyserService');
 const xpEngineService = require('../services/xpEngineService');
+const cache = require('../utils/cache');
 
 const getByCourse = async (req, res) => {
   try {
-    const quizzes = await Quiz.find({ courseId: req.params.courseId }).sort('-createdAt');
+    const quizzes = await Quiz.find({ courseId: req.params.courseId }).sort('-createdAt').lean();
     res.json({ success: true, quizzes });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -125,6 +126,7 @@ const attempt = async (req, res) => {
     // #region agent log
     _log('quizController.js:attempt:success', 'Attempt saved', { attemptId: String(attempt._id), score }, 'B');
     // #endregion
+    await cache.del('analytics:admin_overview');
     res.status(201).json({
       success: true,
       attempt: { id: attempt._id, score, totalQuestions: total, correct },
@@ -166,7 +168,7 @@ const getResults = async (req, res) => {
 
 const getOne = async (req, res) => {
   try {
-    const quiz = await Quiz.findById(req.params.id);
+    const quiz = await Quiz.findById(req.params.id).lean();
     if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found.' });
     res.json({ success: true, quiz });
   } catch (e) {

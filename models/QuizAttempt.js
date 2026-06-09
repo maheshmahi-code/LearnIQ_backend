@@ -55,5 +55,6 @@ const quizAttemptSchema = new mongoose.Schema(
 
 // Compound index for student quiz history
 quizAttemptSchema.index({ studentId: 1, completedAt: -1 });
+quizAttemptSchema.index({ quizId: 1 });
 
 module.exports = mongoose.model('QuizAttempt', quizAttemptSchema);

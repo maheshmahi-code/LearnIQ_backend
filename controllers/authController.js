@@ -8,6 +8,7 @@ const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/environment');
 const xpEngineService = require('../services/xpEngineService');
+const cache = require('../utils/cache');
 
 const cookieOptions = {
   httpOnly: true,
@@ -33,6 +34,7 @@ const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email already registered.' });
     }
     const user = await User.create({ name, email: email?.toLowerCase(), password, role });
+    await cache.del('analytics:admin_overview');
     const token = signToken(user._id);
     res.cookie('token', token, cookieOptions);
     res.status(201).json({
@@ -127,6 +129,7 @@ const googleAuth = async (req, res) => {
         role: 'student',
         avatar: avatar || '',
       });
+      await cache.del('analytics:admin_overview');
     } else if (avatar && !user.avatar) {
       user.avatar = avatar;
       await user.save();

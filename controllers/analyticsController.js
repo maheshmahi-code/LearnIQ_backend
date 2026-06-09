@@ -7,6 +7,7 @@ const QuizAttempt = require('../models/QuizAttempt');
 const Submission = require('../models/Submission');
 const User = require('../models/User');
 const Course = require('../models/Course');
+const cache = require('../utils/cache');
 
 const getStudentAnalytics = async (req, res) => {
   try {
@@ -20,10 +21,11 @@ const getStudentAnalytics = async (req, res) => {
     const studentId = req.params.id || req.user?.id;
     if (!studentId) return res.status(400).json({ success: false, message: 'Student ID required.' });
 
-    let analytics = await Analytics.findOne({ studentId });
+    let analytics = await Analytics.findOne({ studentId }).lean();
     if (!analytics) {
-      analytics = new Analytics({ studentId });
-      await analytics.save();
+      const newAnalytics = new Analytics({ studentId });
+      analytics = await newAnalytics.save();
+      analytics = analytics.toObject();
     }
 
     const quizAttempts = await QuizAttempt.find({ studentId })
@@ -90,23 +92,36 @@ const getStudentAnalytics = async (req, res) => {
 
 const getAdminOverview = async (req, res) => {
   try {
+    const cacheKey = 'analytics:admin_overview';
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, stats: cached, fromCache: true });
+    }
+
     const students = await User.countDocuments({ role: 'student' });
     const courses = await Course.countDocuments();
-    const quizzes = await QuizAttempt.aggregate([
-      { $group: { _id: null, count: { $sum: 1 } } },
-    ]);
-    const quizCount = quizzes[0]?.count || 0;
-    res.json({
-      success: true,
-      stats: {
-        totalStudents: students,
-        totalCourses: courses,
-        totalQuizAttempts: quizCount,
-      },
-    });
+    const quizCount = await QuizAttempt.countDocuments();
+
+    const stats = {
+      totalStudents: students,
+      totalCourses: courses,
+      totalQuizAttempts: quizCount,
+    };
+
+    await cache.set(cacheKey, stats, 600); // Cache for 10 minutes
+    res.json({ success: true, stats });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 };
 
-module.exports = { getStudentAnalytics, getAdminOverview };
+const getPerformanceMetrics = async (req, res) => {
+  try {
+    const stats = require('../middleware/performanceMiddleware').getMetrics();
+    res.json({ success: true, ...stats });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+module.exports = { getStudentAnalytics, getAdminOverview, getPerformanceMetrics };
